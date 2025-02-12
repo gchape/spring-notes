@@ -98,27 +98,27 @@ simple domain objects.
 
 * More Container Concepts
 
-   - **<bean> tag**: 
+   - *<bean> tag*: 
      - Defines a bean in the Spring container with its id and class.
      - The id attribute identifies the bean, and the class attribute
        specifies the fully qualified class name.
    
-   - **<property> tag**: 
+   - *<property> tag*: 
      - The name attribute corresponds to the property of the class.
      - The value or ref attribute injects either a value or a reference to another bean.
 
-   - **Injecting dependencies**: 
+   - *Injecting dependencies*: 
      - The `OrderService` bean has a dependency on the `CustomerRepository` bean, injected
        via the `<property>` tag. The `customerRepository` property of `OrderService` is set
        using the ref attribute, referencing the `customerRepository` bean.
 
-   - **ApplicationContext**: 
+   - *ApplicationContext*: 
      - The `ApplicationContext` loads the Spring beans and manages their lifecycle.
        The `ClassPathXmlApplicationContext` is used to load the XML configuration.
 
 ** Additional DI Methods
 
-   - **Constructor-based Injection**: Instead of setter-based injection, you can
+   - *Constructor-based Injection*: Instead of setter-based injection, you can
      use constructor-based injection. Here's how:
 
      #+BEGIN_SRC xml
@@ -132,20 +132,20 @@ simple domain objects.
 
 ** Lazy vs Eager
 
-**1. Eager Initialization**
+*1. Eager Initialization*
 
    Eager initialization means that the Spring container will initialize
    the beans as soon as the application context is created, regardless of
    whether they are used or not.
 
-   - **When is it used?**
+   - *When is it used?*
      - The bean is created and initialized during the startup of the Spring
        application context.
        
      - Eager initialization is the default behavior for beans in Spring unless
        configured otherwise.
    
-   - **How to configure it in XML?**
+   - *How to configure it in XML?*
 
      By default, Spring beans are eagerly initialized unless you explicitly
      specify lazy initialization.
@@ -158,7 +158,7 @@ simple domain objects.
 
      Here, orderService will be eagerly initialized when the Spring context is loaded.
 
-   - **Example of Eager Initialization**:
+   - *Example of Eager Initialization*:
 
      If you have an application with multiple beans, all beans will be initialized when
      the Spring context starts, even if they are not used.
@@ -184,20 +184,20 @@ simple domain objects.
      constructor will be called immediately, even if you don't
      explicitly request the bean.
 
-**2. Lazy Initialization**
+*2. Lazy Initialization*
 
    Lazy initialization means that the bean will only be instantiated when
    it is first needed or requested. This can help optimize the startup time
    of the application, as beans are not created unless they are required.
 
-   - **When is it used?**
+   - *When is it used?*
      - The bean is created only when it's explicitly requested, not at the
        application context startup.
        
      - Lazy initialization is often used for beans that are rarely used or
        for performance reasons.
 
-   - **How to configure it in XML?**
+   - *How to configure it in XML?*
 
      To configure lazy initialization in Spring XML, use the lazy-init attribute:
 
@@ -208,7 +208,7 @@ simple domain objects.
      With this configuration, the `orderService` will be lazily initialized and
      only created when it is requested for the first time.
 
-   - **Example of Lazy Initialization**:
+   - *Example of Lazy Initialization*:
 
      #+BEGIN_SRC java
      // Bean Class
@@ -233,7 +233,7 @@ simple domain objects.
      `context.getBean("orderService")`. Therefore, the `OrderService Initialized`
      message will only appear when the bean is requested.
 
-**3. Key Differences**
+*3. Key Differences*
 
    | Feature                | Eager Initialization                                  | Lazy Initialization                                   |
    |------------------------+-------------------------------------------------------+-------------------------------------------------------|
@@ -243,33 +243,33 @@ simple domain objects.
    | Resource Usage         | Higher memory usage at startup                        | Memory usage is lower until bean is needed            |
    | Use Case               | Beans that are always needed early in the application | Beans that are not used frequently                    |
 
-**4. Pros and Cons**
+*4. Pros and Cons*
 
-   - **Eager Initialization**:
-     - **Pros**: 
+   - *Eager Initialization*:
+     - *Pros*: 
        - Simplifies the application since beans are guaranteed to be
          initialized immediately.
          
        - Good for beans that are always required and used frequently.
-     - **Cons**: 
+     - *Cons*: 
        - Slower startup time because all beans are initialized upfront.
        - Higher memory consumption as unused beans are initialized.
 
-   - **Lazy Initialization**:
-     - **Pros**: 
+   - *Lazy Initialization*:
+     - *Pros*: 
        - Faster startup time as beans are only created when necessary.
        - Reduces memory consumption if some beans are rarely used.
-     - **Cons**: 
+     - *Cons*: 
        - Can lead to delays in service access since beans are initialized on-demand.
        - Some configurations may require additional management to handle bean lifecycle properly.
 
-**5. Choosing Between Eager and Lazy Initialization**
+*5. Choosing Between Eager and Lazy Initialization*
 
-   - Use **eager initialization** for:
+   - Use *eager initialization* for:
      - Critical beans that must be ready immediately upon startup.
      - Beans that are frequently used across the application.
    
-   - Use **lazy initialization** for:
+   - Use *lazy initialization* for:
      - Optional or rarely used beans.
      - Beans that are resource-intensive or take time to initialize.
 
@@ -485,7 +485,7 @@ advice that wraps method execution.
 
 To use Aspect-Oriented Programming (AOP) with annotations in Spring, follow these steps:
 
-1. **Enable AspectJ Autoproxying**
+1. *Enable AspectJ Autoproxying*
    First, you need to enable AspectJ-based AOP proxying in
    your Spring configuration.
 
@@ -499,7 +499,7 @@ To use Aspect-Oriented Programming (AOP) with annotations in Spring, follow thes
    This tag enables the use of AspectJ annotations to define
    aspects and apply them to your beans automatically.
 
-2. **Annotate Your Aspects and Methods**
+2. *Annotate Your Aspects and Methods*
    Next, you can use annotations like `@Before`, `@After`,
    `@Around`, etc., in your aspect classes to define the
    corresponding advice.
@@ -509,7 +509,7 @@ To use Aspect-Oriented Programming (AOP) with annotations in Spring, follow thes
    #+ATTR_HTML: :width 50%
    [[./images/aop-annotations.png]]
 
-   **Example Aspect Class with Annotations:**
+   *Example Aspect Class with Annotations:*
    The following Java code shows how you can define an aspect with annotations for performance timing advice:
 
    #+begin_src java
@@ -557,9 +557,9 @@ To use Aspect-Oriented Programming (AOP) with annotations in Spring, follow thes
   #+end_src
   
   *auto-wire* options:
-  1. byName
-  2. byType
-  3. constructor
+  - byName
+  - byType
+  - constructor
      
 
 * TODO Transactions
