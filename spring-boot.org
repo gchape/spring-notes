@@ -6,17 +6,17 @@
 
 The `@SpringBootApplication` annotation is a convenience annotation in Spring Boot that is a combination of the following:
 
-- **@EnableAutoConfiguration**  
+- *@EnableAutoConfiguration*  
   Enables Spring Boot’s auto-configuration mechanism, which automatically configures beans based on the classpath dependencies and properties.
 
-- **@ComponentScan**  
+- *@ComponentScan*
   Enables component scanning, allowing Spring to automatically detect and register beans in the package where the main application class is located, as well as its sub-packages.  
   - If you need to specify base packages explicitly, you can use:
     #+begin_src java
     @ComponentScan(basePackages = {"com.example.package1", "com.example.package2"})
     #+end_src
 
-- **@Configuration**  
+- *@Configuration*  
   Indicates that the class contains bean definitions and can be used to configure Spring’s application context.
 
 * DONE Bean Scopes in Spring
@@ -40,12 +40,12 @@ The lifecycle of a Spring bean consists of the following steps:
 2. *Bean is instantiated.*
 3. *Dependencies are injected.*
 4. *Spring performs internal processing.*
-5. **@PostConstruct** (if present) is called – Runs after dependencies are injected.
+5. *@PostConstruct* (if present) is called – Runs after dependencies are injected.
 6. *Application runs until termination.*
 7. *Spring container shuts down.*
-8. **@PreDestroy** (if present) is called – Runs before the bean is destroyed.
+8. *@PreDestroy* (if present) is called – Runs before the bean is destroyed.
 
-**Note:**  
+*Note:*
 - For *prototype-scoped* beans, Spring does not call the destroy method.  
 - Unlike singleton-scoped beans, prototype beans are not fully managed by Spring after instantiation. The container creates and hands over the instance to the client but does not track its lifecycle.
 
@@ -53,7 +53,7 @@ The lifecycle of a Spring bean consists of the following steps:
 
 The `@Bean` annotation is used in Spring to define a bean explicitly within a Java configuration class. It is often used for integrating third-party libraries that are not managed by Spring's component scanning.
 
-**Java-based Configuration**
+*Java-based Configuration*
 #+begin_src java
 @Configuration
 public class ProjectConfig {
@@ -66,7 +66,7 @@ public class ProjectConfig {
 }
 #+end_src
 
-**XML-based Configuration**
+*XML-based Configuration*
 #+begin_src xml
 <bean id="remoteClient" class="software.amazon.awssdk.services.s3.S3Client">
     <!-- Additional configuration -->
@@ -79,7 +79,7 @@ This allows Spring to manage the `S3Client` instance as a bean and inject it whe
 
 The `@Lazy` annotation is used to delay the initialization of a bean until it is actually requested.
 
-**Example of a Lazy Bean**
+*Example of a Lazy Bean*
 #+begin_src java
 @Component
 @Lazy
@@ -92,7 +92,7 @@ public class LazyService {
 
 By default, Spring initializes all singleton beans at startup. Adding `@Lazy` ensures that the bean is created only when it is first accessed.
 
-**Global Lazy Initialization**
+*Global Lazy Initialization*
 
 To enable lazy initialization globally for all beans, set the following property in `application.properties`:
 #+begin_src properties
@@ -119,7 +119,7 @@ public class AppConfig {
 
 When multiple beans of the same type exist in the Spring container, ambiguity can arise. `@Primary` and `@Qualifier` help resolve such conflicts.
 
-**@Primary Annotation**
+*@Primary Annotation*
 
 Marks a bean as the default choice when multiple candidates exist.
 
@@ -135,7 +135,7 @@ public class DefaultService implements MyService {
 
 Now, if there are multiple beans of `MyService`, Spring will use the `DefaultService` bean by default.
 
-**@Qualifier Annotation**
+*@Qualifier Annotation*
 
 Used to explicitly specify which bean to inject when multiple beans of the same type are available.
 
@@ -187,7 +187,7 @@ Here, `@Qualifier("specialService")` tells Spring to inject `SpecialService` ins
     }
   #+end_src
 
-** JPQL
+* JPQL
 - _<T> TypedQuery<T> createQuery(String qlString, Class<T> resultClass)_
 
   #+begin_src java
