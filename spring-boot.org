@@ -1,0 +1,238 @@
+#+date: <2025-02-12 Wed>
+#+author: Giorgi Chapidze
+#+description: Spring Boot
+
+* DONE @SpringBootApplication Annotation
+
+The `@SpringBootApplication` annotation is a convenience annotation in Spring Boot that is a combination of the following:
+
+- **@EnableAutoConfiguration**  
+  Enables Spring Boot’s auto-configuration mechanism, which automatically configures beans based on the classpath dependencies and properties.
+
+- **@ComponentScan**  
+  Enables component scanning, allowing Spring to automatically detect and register beans in the package where the main application class is located, as well as its sub-packages.  
+  - If you need to specify base packages explicitly, you can use:
+    #+begin_src java
+    @ComponentScan(basePackages = {"com.example.package1", "com.example.package2"})
+    #+end_src
+
+- **@Configuration**  
+  Indicates that the class contains bean definitions and can be used to configure Spring’s application context.
+
+* DONE Bean Scopes in Spring
+
+A bean’s scope defines how the Spring container creates and manages instances of the bean.
+
+| Scope       | Description                                                                                                                     |
+|-------------+---------------------------------------------------------------------------------------------------------------------------------|
+| *singleton*   | A single shared instance of the bean is created and maintained throughout the application lifecycle. This is the default scope. |
+| *prototype*   | A new instance of the bean is created every time it is requested from the container.                                            |
+| *request*     | A new instance is created for each HTTP request. Used in web applications.                                                      |
+| *session*     | A single instance is created for the duration of an HTTP session. Used in web applications.                                     |
+| *application* | A single instance is created per `ServletContext`. Used in web applications.                                                    |
+| *websocket*   | A single instance is created per WebSocket session. Used in web applications.                                                   |
+
+* DONE Bean Lifecycle in Spring
+
+The lifecycle of a Spring bean consists of the following steps:
+
+1. *Spring container starts.*
+2. *Bean is instantiated.*
+3. *Dependencies are injected.*
+4. *Spring performs internal processing.*
+5. **@PostConstruct** (if present) is called – Runs after dependencies are injected.
+6. *Application runs until termination.*
+7. *Spring container shuts down.*
+8. **@PreDestroy** (if present) is called – Runs before the bean is destroyed.
+
+**Note:**  
+- For *prototype-scoped* beans, Spring does not call the destroy method.  
+- Unlike singleton-scoped beans, prototype beans are not fully managed by Spring after instantiation. The container creates and hands over the instance to the client but does not track its lifecycle.
+
+* DONE @Bean Annotation
+
+The `@Bean` annotation is used in Spring to define a bean explicitly within a Java configuration class. It is often used for integrating third-party libraries that are not managed by Spring's component scanning.
+
+**Java-based Configuration**
+#+begin_src java
+@Configuration
+public class ProjectConfig {
+    
+    @Bean
+    public S3Client remoteClient() {
+        // Code to configure and return an S3Client instance
+        return S3Client.create();
+    }
+}
+#+end_src
+
+**XML-based Configuration**
+#+begin_src xml
+<bean id="remoteClient" class="software.amazon.awssdk.services.s3.S3Client">
+    <!-- Additional configuration -->
+</bean>
+#+end_src
+
+This allows Spring to manage the `S3Client` instance as a bean and inject it wherever needed.
+
+* DONE @Lazy Annotation
+
+The `@Lazy` annotation is used to delay the initialization of a bean until it is actually requested.
+
+**Example of a Lazy Bean**
+#+begin_src java
+@Component
+@Lazy
+public class LazyService {
+    public LazyService() {
+        System.out.println("LazyService Bean Initialized");
+    }
+}
+#+end_src
+
+By default, Spring initializes all singleton beans at startup. Adding `@Lazy` ensures that the bean is created only when it is first accessed.
+
+**Global Lazy Initialization**
+
+To enable lazy initialization globally for all beans, set the following property in `application.properties`:
+#+begin_src properties
+spring.main.lazy-initialization=true
+#+end_src
+
+Or configure it in Java:
+#+begin_src java
+@Configuration
+@EnableLazyInitialization
+public class AppConfig {
+}
+#+end_src
+
+* @Id
+
+#+ATTR_HTML: :width 50%
+[[./images/id_strategy.png]]
+
+#+ATTR_HTML: :width 50%
+[[./images/custom_strategy.png]]
+
+* DONE @Qualifier and @Primary Annotations
+
+When multiple beans of the same type exist in the Spring container, ambiguity can arise. `@Primary` and `@Qualifier` help resolve such conflicts.
+
+**@Primary Annotation**
+
+Marks a bean as the default choice when multiple candidates exist.
+
+#+begin_src java
+@Component
+@Primary
+public class DefaultService implements MyService {
+    public void serve() {
+        System.out.println("Primary Bean");
+    }
+}
+#+end_src
+
+Now, if there are multiple beans of `MyService`, Spring will use the `DefaultService` bean by default.
+
+**@Qualifier Annotation**
+
+Used to explicitly specify which bean to inject when multiple beans of the same type are available.
+
+#+begin_src java
+@Component
+public class SpecialService implements MyService {
+    public void serve() {
+        System.out.println("Special Bean");
+    }
+}
+
+@Component
+public class ServiceConsumer {
+    private final MyService myService;
+
+    @Autowired
+    public ServiceConsumer(@Qualifier("specialService") MyService myService) {
+        this.myService = myService;
+    }
+}
+#+end_src
+
+Here, `@Qualifier("specialService")` tells Spring to inject `SpecialService` instead of `DefaultService`.
+
+* DONE Hibernate/JPA
+#+ATTR_HTML: :width 50%
+[[./images/jpa_entity_manager.png]]
+
+- _TRUNCATE TABLE ´table1´ RESTART IDENTITY;_
+  - *TRUNCATE TABLE;* removes all rows.
+  - *RESTART IDENTITY;* resets the auto-increment counter.
+
+- _find(Class<T> entityClass, Object primaryKey)_
+  
+  #+begin_src java
+    @Override
+    public Student findById(long id) {
+        return entityManager.find(Student.class, id);
+    }      
+  #+end_src
+
+- _persist(Object entity)_
+  
+  #+begin_src java
+    @Override
+    @Transactional
+    public void save(Student student) {
+        entityManager.persist(student);
+    }
+  #+end_src
+
+** JPQL
+- _<T> TypedQuery<T> createQuery(String qlString, Class<T> resultClass)_
+
+  #+begin_src java
+    var query = entityManager.createQuery("SELECT s FROM Student s WHERE s.id = :id", Student.class);
+
+    query.setParameter("id", id);
+  #+end_src
+
+  #+begin_src java
+
+    entityManager.createQuery("select s from Student s", Student.class).getResultList();
+    
+  #+end_src
+
+- _<T> T merge(T entity)_
+
+  - Checks for the Primary Key:
+    1. The student object must have an ID (primary key) set.
+    2. If the ID exists in the database, merge() updates the existing row.
+    3. If the ID does not exist, it inserts a new row.
+  
+  #+begin_src java
+    @Override
+    @Transactional
+    public void update(Student student) {
+        entityManager.merge(student);
+    }
+
+    // usage
+    studentDAO.update(studentDAO.findById(1L));
+  #+end_src
+
+- _remove(Object entity)_
+  #+begin_src java
+    entityManager.remove(student);
+  #+end_src
+
+  #+begin_src java
+    // option 2
+    @Override
+    public void delete(long id) {
+        entityManager
+                .createQuery("delete from Student where id = :id")
+                .setParameter("id", id)
+                .executeUpdate();
+    }
+  #+end_src
+
