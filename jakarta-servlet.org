@@ -1,0 +1,429 @@
+#+description: Jakarta Servlet API
+#+author: Giorgi Chapidze
+#+date: <2025-02-15 Sat>
+
+* Jakarta Servlet Life cycle
+
+** Instance Creation
+
+   - The servlet container loads the servlet class
+     and creates an instance.
+
+   - This happens only once during the servlet’s
+     lifecycle unless reloaded.
+   
+** Initialization (init)
+   - The container calls ~init(ServletConfig config)~
+     after instantiating the servlet.
+     
+   - Executed only once; used for resource allocation
+     (e.g., database connections).
+     
+   - If initialization fails, the servlet is not
+     placed into service.
+
+** Request Handling (service)
+
+   - The ~service(HttpServletRequest req, HttpServletResponse res)~
+     method is called for each client request.
+     
+   - Determines request type (~GET~, ~POST~, etc.) and
+     forwards it to ~doGet()~, ~doPost()~, etc.
+     
+   - Multi-threaded execution allows handling
+     multiple requests concurrently.
+
+** Destruction (destroy)
+   - The container calls ~destroy()~ when the servlet is no longer needed.
+
+   - Used to release resources (e.g., database connections, file handles, cached data).
+     
+   - After ~destroy()~, the servlet instance is garbage collected.
+
+** Additional Notes
+   - Servlets are multi-threaded by default.
+     
+   - The deprecated ~SingleThreadModel~ was used to handle one request at a time.
+     
+   - If the servlet class file is modified, the container may reload the servlet, triggering a new lifecycle.
+
+   #+ATTR_HTML: :width 50%
+  [[./images/jakarta_servlet_life_cycle.png]]
+
+   
+* ServletConfig vs ServletContext
+
+** ServletConfig
+- Represents configuration settings for a *single servlet*.
+
+- Used to pass *initialization parameters* specific to a servlet.
+
+- Accessible inside a servlet using ~getServletConfig()~.
+
+  - Defined in ~web.xml~ using ~<init-param>~, or via annotations (~@WebServlet~).
+
+  - Provides methods:
+    - ~getInitParameter(String name)~ → Retrieves servlet-specific parameters.
+
+    - ~getServletName()~ → Gets the servlet’s name.
+
+    - ~getServletContext()~ → Provides access to the ~ServletContext~.
+
+- Exists *per servlet instance*.
+
+
+** ServletContext
+- Represents *application-wide* context shared across all servlets.
+
+- Used to share resources like attributes, logging, and global parameters.
+
+- Accessible inside a servlet using ~getServletContext()~.
+
+- Defined in ~web.xml~ using ~<context-param>~.
+
+- Provides methods:
+  - ~getInitParameter(String name)~ → Retrieves global parameters.
+
+  - ~setAttribute(String name, Object value)~ → Stores an object for global access.
+
+  - ~getAttribute(String name)~ → Retrieves stored objects.
+
+  - ~log(String message)~ → Logs messages to the server log.
+
+- Exists *once per web application*.
+
+** Issue with Overriding ~init()~ Without Calling ~super.init()~
+
+- The default implementation of ~init()~ in ~GenericServlet~ sets the *ServletConfig* object.
+
+- If we override ~init()~ but do not call ~super.init(config)~, the servlet's *ServletConfig* will not be initialized.
+
+- As a result, calling ~getServletConfig()~ inside the servlet will return ~null~.
+  
+     #+begin_src java
+     public void init(ServletConfig config) throws ServletException {
+         super.init(config);
+         // Custom initialization code
+     }
+     #+end_src
+
+
+* GET vs POST Requests
+
+** GET Request
+   - Retrieves data from the server.
+
+   - Parameters are sent in the *URL query string*.
+
+   - No request body is sent.
+
+   #+begin_example
+   GET /api/data?key=value HTTP/1.1
+   Host: example.com
+   User-Agent: Mozilla/5.0
+   Accept: application/json
+   Connection: keep-alive
+   #+end_example
+
+   - *Key Points:*
+     - Query parameters are in the URL (`?key=value`).
+
+     - No request body.
+
+     - Idempotent and safe.
+
+
+** POST Request
+   - Sends data to the server.
+
+   - Parameters can be in the *request body*.
+
+   - Used for form submissions and API calls.
+
+   #+begin_example
+   POST /api/data HTTP/1.1
+   Host: example.com
+   User-Agent: Mozilla/5.0
+   Accept: application/json
+   Content-Type: application/x-www-form-urlencoded
+   Content-Length: 15
+   Connection: keep-alive
+
+   key=value
+   #+end_example
+
+   - *Key Points:*
+     - Parameters are sent in the request *body*.
+
+     - Uses `application/x-www-form-urlencoded` by default.
+
+     - *getParameter("key")* works for both GET and POST in this case.
+
+
+** JSON Payload in POST
+   - If sending JSON, use `application/json`:
+     
+   #+begin_example
+   POST /api/data HTTP/1.1
+   Host: example.com
+   Content-Type: application/json
+   Content-Length: 27
+
+   { "key": "value" }
+   #+end_example
+
+   - *Key Difference:*
+     - `req.getParameter("key")` *does not work* for JSON.
+
+     - Instead, the body must be read manually.
+
+
+** Java Servlet Implementation
+- Handling GET and POST in a servlet:
+
+   #+begin_src java
+   @WebServlet("/api/data")
+   public class ExampleServlet extends HttpServlet {
+       protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+           String param = req.getParameter("key"); // Works (reads from URL)
+           resp.getWriter().write("GET received: " + param);
+       }
+
+       protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+           String param = req.getParameter("key"); // Works if Content-Type is application/x-www-form-urlencoded
+           resp.getWriter().write("POST received: " + param);
+       }
+   }
+   #+end_src
+
+   - *getParameter() works for both* if using `application/x-www-form-urlencoded`.
+   - *For JSON, manually read the body:*
+
+       #+begin_src java
+         BufferedReader reader = req.getReader();
+
+         String body = reader
+             .lines()
+             .collect(Collectors.joining("\n"));
+       #+end_src
+
+
+** Key Differences Summary
+
+   | Feature             | GET                | POST                            |
+   |---------------------+--------------------+---------------------------------|
+   | Idempotent          | ✅ Yes             | ❌ No                           |
+   | Safe                | ✅ Yes             | ❌ No                           |
+   | Request Data        | Query string (URL) | Request body                    |
+   | Visible in URL      | ✅ Yes             | ❌ No                           |
+   | Uses getParameter() | ✅ Yes             | ✅ Yes (if form data)           |
+   | JSON Support        | ❌ No body         | ❌ Requires manual body parsing |
+   | Use Case            | Fetch data         | Submit data, create/update      |
+   |                     |                    |                                 |
+
+
+* Forward vs Redirect in Servlets
+
+** Overview
+   - *Forward:* The request is forwarded *internally* within the same server.
+   - *Redirect:* The client is instructed to make a *new request* to a different URL.
+
+   | Feature       | Forward (`RequestDispatcher`) | Redirect (`sendRedirect`)     |
+   |---------------+-------------------------------+-------------------------------|
+   | Request Scope | Same request object           | New request object            |
+   | URL Change    | ❌ No                         | ✅ Yes                        |
+   | Performance   | ✅ Faster (server-side)       | ❌ Slower (extra round-trip)  |
+   | Data Sharing  | ✅ Attributes preserved       | ❌ Lost (new request)         |
+   | Use Case      | Internal navigation           | Redirecting to another domain |
+
+
+** Internal Forwarding (RequestDispatcher)
+   - Uses `RequestDispatcher.forward()` to pass the request to another resource on the *same server*.
+   - The *URL in the browser does not change*.
+
+   #+begin_src java
+   @WebServlet("/forwardExample")
+   public class ForwardExample extends HttpServlet {
+       protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+           req.setAttribute("message", "Forwarded data");
+           RequestDispatcher dispatcher = req.getRequestDispatcher("/destination.jsp");
+           dispatcher.forward(req, resp);
+       }
+   }
+   #+end_src
+
+   - *Key Points:*
+     - Uses `RequestDispatcher.forward()`.
+
+     - The original request and response objects are passed along.
+
+     - Request attributes (`req.setAttribute()`) are preserved.
+
+
+** External Redirect (`sendRedirect`)
+   - Uses `HttpServletResponse.sendRedirect()` to tell the browser to make a *new request*.
+   - The *URL in the browser changes*.
+
+   #+begin_src java
+   @WebServlet("/redirectExample")
+   public class RedirectExample extends HttpServlet {
+       protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+           resp.sendRedirect("https://example.com");
+       }
+   }
+   #+end_src
+
+   - *Key Points:*
+     - Uses `resp.sendRedirect()`.
+
+     - A *new HTTP request* is made by the client.
+
+     - The *request attributes are lost* (since it's a new request).
+
+
+** Example: Forward vs Redirect
+   - Assume a request to `/handleRequest`:
+
+   | Scenario | Browser URL Before | Browser URL After | Data Preserved |
+   |----------+--------------------+-------------------+----------------|
+   | Forward  | `/handleRequest`   | `/handleRequest`  | ✅ Yes         |
+   | Redirect | `/handleRequest`   | `/newPage`        | ❌ No          |
+
+
+** When to Use What?
+   - *Use Forward when:*
+     - You want to navigate *within the same application*.
+
+     - Data (request attributes) should be preserved.
+
+     - URL should not change.
+
+   - *Use Redirect when:*
+     - You need to send the client to *another domain*.
+
+     - You want to refresh the page after a form submission (`PRG pattern`).
+
+     - You want to avoid re-processing a POST request on refresh.
+
+
+** PRG Pattern (Post-Redirect-Get)
+   - *Problem:* If a user submits a form and refreshes, the form might be *submitted again*.
+   - *Solution:* Redirect after handling the form.
+   
+   #+begin_src java
+   protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+       // Process form data
+       resp.sendRedirect("success.jsp"); // Prevents form resubmission
+   }
+   #+end_src
+   
+
+* State Management
+
+State management is essential to maintain user-related data across multiple HTTP requests since HTTP is a stateless protocol. Various techniques can be used to persist data across requests.
+
+** 1. HttpSession (Session Scope)
+   - Stores data per user session, available across multiple requests.
+   - Lifespan: Until session expiration or invalidation.
+   - Suitable for storing user-related data like login status, cart items.
+   - Example:
+     #+BEGIN_SRC java
+     HttpSession session = request.getSession();
+     session.setAttribute("username", "john_doe");
+     String user = (String) session.getAttribute("username");
+     #+END_SRC
+   - *Pros:* Persistent across requests, automatically managed by the server.
+   - *Cons:* Consumes server memory, requires session management strategies.
+
+
+** 2. HttpServletRequest (Request Scope)
+   - Stores data for a single request lifecycle.
+   - Lifespan: Ends when the request is processed.
+   - Suitable for form inputs, request-specific metadata.
+   - Example:
+     #+BEGIN_SRC java
+     request.setAttribute("message", "Welcome back!");
+     String message = (String) request.getAttribute("message");
+     #+END_SRC
+   - *Pros:* Lightweight, no session tracking needed.
+   - *Cons:* Not persistent across requests.
+
+
+** 3. ServletContext (Application Scope)
+   - Stores data globally accessible to all users and requests.
+   - Lifespan: Exists as long as the application is running.
+   - Suitable for application-wide settings, shared resources.
+   - Example:
+     #+BEGIN_SRC java
+     ServletContext context = getServletContext();
+     context.setAttribute("appName", "MyApp");
+     String appName = (String) context.getAttribute("appName");
+     #+END_SRC
+   - *Pros:* Shared across the entire application.
+   - *Cons:* Changes affect all users.
+
+
+** 4. Cookies (Client-Side Storage)
+   - Stores small amounts of user data on the client’s browser.
+   - Sent with every request to the server.
+   - Example:
+     #+BEGIN_SRC java
+     Cookie cookie = new Cookie("username", "john_doe");
+     cookie.setMaxAge(3600); // 1 hour
+     response.addCookie(cookie);
+     #+END_SRC
+   - *Pros:* Persistent even after session ends, works across servers.
+   - *Cons:* Size limitations, security concerns.
+
+
+** 5. URL Rewriting (Client-Side Storage)
+   - Embeds session ID as a parameter in the URL.
+   - Example:
+     #+BEGIN_SRC java
+     String rewrittenUrl = response.encodeURL("profile.jsp");
+     #+END_SRC
+   - *Pros:* Works without cookies.
+   - *Cons:* Visible in URLs, prone to session hijacking.
+
+
+** 6. Hidden Fields in Forms (Client-Side Storage)
+   - Stores session-related data in hidden form fields.
+   - Example:
+     #+BEGIN_SRC html
+     <input type="hidden" name="sessionId" value="12345">
+     #+END_SRC
+   - *Pros:* Works for form submissions.
+   - *Cons:* Not suitable for non-form-based navigation.
+
+
+** 7. Database Storage (Server-Side Storage)
+   - Stores session data in a database for long-term persistence.
+   - Example:
+     #+BEGIN_SRC java
+     Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
+     PreparedStatement stmt = conn.prepareStatement("INSERT INTO sessions (session_id, data) VALUES (?, ?)");
+     #+END_SRC
+   - *Pros:* Scalable, persistent across server restarts.
+   - *Cons:* More complex setup, requires database operations.
+
+
+** Comparison Table:
+| Method             | Scope              | Persistence | Security | Scalability |
+|--------------------+--------------------+-------------+----------+-------------|
+| HttpSession        | Per user session   | Medium      | High     | Low         |
+| HttpServletRequest | Single request     | Short-term  | High     | High        |
+| ServletContext     | Global (all users) | Long-term   | High     | High        |
+| Cookies            | Client browser     | Medium      | Low      | High        |
+| URL Rewriting      | Client URL         | Short-term  | Low      | High        |
+| Hidden Fields      | Form submission    | Short-term  | Medium   | Medium      |
+| Database           | Server storage     | Long-term   | High     | High        |
+
+
+** Choosing the Right Approach:
+   - Use *HttpSession* for user-specific data that needs to persist across requests.
+   - Use *HttpServletRequest* for temporary, request-scoped data.
+   - Use *ServletContext* for application-wide settings and shared resources.
+   - Use *Cookies* for lightweight client-side storage, but consider security risks.
+   - Use *Database Storage* for scalable, persistent session handling in distributed environments.
+
+Each method has trade-offs, and the right choice depends on the application’s needs.
