@@ -1,0 +1,115 @@
+* Thymeleaf Template Cache TTL
+The following method sets the cache Time-To-Live (TTL) for Thymeleaf templates:
+
+#+begin_src java
+  templateResolver.setCacheTTLMs(3600000L);
+#+end_src
+
+** Breakdown
+- `templateResolver` is an instance of `TemplateResolver` or a subclass.
+- `.setCacheTTLMs(3600000L)` sets the cache duration to *3,600,000 milliseconds (1 hour)*.
+- This means Thymeleaf caches compiled templates for *1 hour* before checking for changes.
+
+** Why use it?
+- *Improves performance*: Reduces reprocessing of templates.
+- *Good for production*: Templates remain cached, minimizing I/O overhead.
+- *Bad for development*: Frequent changes won’t be reflected immediately.
+
+** Modern Alternative (Thymeleaf 3+)
+For Spring Boot applications, caching can be controlled via `application.properties`:
+
+#+begin_src properties
+spring.thymeleaf.cache=false  # Disable caching (useful for development)
+#+end_src
+
+Disabling caching ensures template changes are immediately visible without restarting the application.
+
+* ServletContextTemplateResolver Class
+
+The `ServletContextTemplateResolver` class is a part of Thymeleaf’s template resolution system. It’s specifically designed to resolve templates stored within the *Servlet context*, making it ideal for *web applications*.
+
+** Key Features
+- *Template Location*: It resolves templates from the *Servlet context*, meaning templates are expected to be available under the web application's directory structure (e.g., `WEB-INF/templates`).
+- *Web-Based Setup*: Commonly used in *web applications* that run on a servlet container like *Tomcat* or *Jetty*.
+- *Integration with Servlet API*: This resolver directly interacts with the *ServletContext*, which is the context for a web application, to locate resources.
+
+** Common Usage
+Typically, you would use `ServletContextTemplateResolver` to configure Thymeleaf in a traditional *web-based application* where the templates are located within the web application's directory. You can set various properties, like the template path or cache settings.
+
+Example of initialization:
+#+begin_src java
+  ServletContextTemplateResolver templateResolver = new ServletContextTemplateResolver();
+  templateResolver.setPrefix("/WEB-INF/templates/");
+  templateResolver.setSuffix(".html");
+  templateResolver.setCacheable(true);
+#+end_src
+
+** Configuration Options
+- `setPrefix(String prefix)`: Specifies the base path where the templates are located.
+- `setSuffix(String suffix)`: Defines the file extension for the templates.
+- `setCacheable(boolean cacheable)`: Controls whether templates are cached, which is important for production environments.
+
+** When to Use
+- *Web Applications*: It is used when templates need to be resolved from locations within a *servlet context* (such as `WEB-INF` in traditional JSP-based applications).
+- *Servlet Context Integration*: It's suited for scenarios where you have direct access to the Servlet API, allowing you to work with templates in a containerized environment.
+
+* Customizing Cache Behavior with ICacheManager
+
+Thymeleaf provides flexibility in managing caches. The cache behavior and sizes can be customized either by implementing the `ICacheManager` interface or by modifying the default cache manager, which is the `StandardCacheManager`.
+
+** Cache Management Options
+
+1. *ICacheManager Interface*:
+   - If you want full control over the caching mechanism, you can implement the `ICacheManager` interface.  
+   - This allows you to define custom caching strategies, such as the type of cache to use (e.g., in-memory or distributed cache) and the logic for cache invalidation.
+
+2. *StandardCacheManager*:
+   - Thymeleaf uses a default cache manager, the `StandardCacheManager`, which handles template caching and other caching tasks.
+   - You can modify its behavior by configuring various properties such as TTL (Time-To-Live), maximum size, and cache expiration policies.
+
+** Key Methods and Settings
+
+- *Implementing ICacheManager*:
+  - By implementing this interface, you can manage caching at a lower level, giving you complete control over how templates and other resources are cached.
+  - The `ICacheManager` interface defines methods for creating caches, adding items to caches, and retrieving them.
+
+- *Using StandardCacheManager*:
+  - The default `StandardCacheManager` can be adjusted by calling methods like `setMaxSize(int size)` to limit the number of cached templates.
+  - You can also set a custom TTL using methods like `setCacheTTLMs(long ttl)` to control how long templates are cached before being refreshed.
+
+** Example: Using StandardCacheManager
+Here’s how you can customize the cache size and TTL with the `StandardCacheManager`:
+
+#+begin_src java
+  StandardCacheManager cacheManager = new StandardCacheManager();
+  cacheManager.setMaxSize(500);  // Set maximum number of cached templates
+  cacheManager.setCacheTTLMs(3600000L);  // Set TTL to 1 hour
+  templateResolver.setCacheManager(cacheManager);
+#+end_src
+
+** Conclusion
+Customizing cache behavior allows you to optimize template rendering performance and manage memory usage in web applications. Whether you implement `ICacheManager` for full flexibility or adjust the `StandardCacheManager`, you can tailor the caching system to your application’s needs.
+
+* Using th:text and Externalizing Text
+Externalizing text means extracting fragments of template code into separate files (usually .properties files) for easy substitution in different languages (internationalization, i18n). These text fragments are called “messages.”
+
+Messages have keys that identify them, and Thymeleaf uses the `#{...}` syntax to map text to a message:
+
+#+begin_src html
+  <p th:text="#{home.welcome}">Welcome to our grocery store!</p>
+#+end_src
+
+This demonstrates two features of the Thymeleaf Standard Dialect:
+
+1. *th:text*: Evaluates the expression and sets the result as the body of the tag.
+2. *#{home.welcome}*: Specifies that the text is mapped to the `home.welcome` key in the current locale’s message source.
+
+** Where is the Externalized Text?
+
+The location of externalized text is configurable, depending on the implementation of `org.thymeleaf.messageresolver.IMessageResolver`. By default, the *StandardMessageResolver* is used, which expects messages to be in `.properties` files. These files should be in the same folder as the template and named according to the template's name and locale. For example:
+
+- `/WEB-INF/templates/home_en.properties` for English texts.
+- `/WEB-INF/templates/home_es.properties` for Spanish texts.
+- `/WEB-INF/templates/home_pt_BR.properties` for Portuguese (Brazil) texts.
+- `/WEB-INF/templates/home.properties` for default texts (if no locale is matched).
+
